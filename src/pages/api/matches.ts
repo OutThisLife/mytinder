@@ -9,7 +9,7 @@ export default withTinder(async ({ auth, req, res, t }) => {
 
   res.status(200).json(
     await t<Tinder.MatchResponse>('GET', '/v2/matches', {
-      body: { count: req?.query?.count ?? 10 },
+      body: req.query ?? { count: 100 },
       headers: { 'X-Auth-Token': auth?.data?.api_token },
       ttl: 1000 * 60 * 60
     })

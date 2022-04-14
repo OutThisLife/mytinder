@@ -1,3 +1,4 @@
+import type { GridProps } from '@nextui-org/react'
 import { Card, Grid, Loading } from '@nextui-org/react'
 import { Suspense, useEffect, useState } from 'react'
 import useSWR from 'swr'
@@ -6,53 +7,75 @@ import { Item } from '~/components'
 
 const { FB_APP_ID } = process.env
 
-const Placeholder = () => (
-  <Grid css={{ textAlign: 'center' }} sm={100}>
+const Placeholder = (props: GridProps) => (
+  <Grid css={{ textAlign: 'center' }} sm={100} {...props}>
     <Card>
       <Loading size="xl" type="spinner" />
     </Card>
   </Grid>
 )
 
-const Inner = ({ userID }: FBStatus['authResponse']) => {
+const Inner = ({
+  pageToken,
+  userID
+}: {
+  userID?: string
+  pageToken?: string
+}) => {
   const [items, update] = useState<Tinder.Match[]>([])
 
   const { data, isValidating } = useSWR<{ data: Tinder.MatchResponse }>(
-    userID ? `/api/matches?count=100` : null
+    userID
+      ? `/api/matches?${new URLSearchParams({
+          count: 100,
+          pageToken
+        } as any).toString()}`
+      : null
   )
 
   useEffect(
     () =>
-      void update(
+      void !isValidating &&
+      update(
         Array.from(data?.data?.matches ?? [])
           .filter(i => !!i?.person?.photos?.length)
           .sort((a, b) => +b?.is_super_like - +a?.is_super_like)
       ),
-    [data]
+    [data, isValidating]
   )
 
   return (
     <>
       {isValidating || !items?.length ? (
-        <Placeholder />
+        <Placeholder md={3} sm={6} xs={12} />
       ) : (
-        <Suspense
-          fallback={
-            <Card>
-              <Loading size="xl" type="spinner" />
-            </Card>
-          }>
-          {items?.map(i => (
-            <Item key={i?.id} md={3} sm={6} xs={12} {...{ item: i, update }} />
-          ))}
-        </Suspense>
+        <>
+          <Suspense fallback={<Placeholder md={3} sm={6} xs={12} />}>
+            {items?.map(i => (
+              <Item
+                key={i?.id}
+                md={3}
+                sm={6}
+                xs={12}
+                {...{ item: i, update }}
+              />
+            ))}
+          </Suspense>
+
+          {data?.data?.next_page_token && (
+            <Inner
+              key={data?.data?.next_page_token}
+              {...{ pageToken: data?.data?.next_page_token, userID }}
+            />
+          )}
+        </>
       )}
     </>
   )
 }
 
 export default function Index() {
-  const [user, setUser] = useState<FBStatus['authResponse'] | null>(null)
+  const [user, setUser] = useState<FBStatus['authResponse'] | null>()
 
   useEffect(() => {
     if (!('browser' in process) || user?.accessToken) {

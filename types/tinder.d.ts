@@ -14,7 +14,8 @@ declare module 'tinder' {
     }
 
     interface MatchResponse {
-      matches?: Match[]
+      matches: Match[]
+      next_page_token: string
     }
 
     interface Match {
