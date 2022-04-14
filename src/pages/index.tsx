@@ -18,7 +18,7 @@ const Inner = ({ userID }: FBStatus['authResponse']) => {
   const [items, update] = useState<Tinder.Match[]>([])
 
   const { data, isValidating } = useSWR<{ data: Tinder.MatchResponse }>(
-    userID ? `/api/tinder?count=100` : null
+    userID ? `/api/matches?count=100` : null
   )
 
   useEffect(

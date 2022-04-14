@@ -1,4 +1,3 @@
-/** @docs https://gist.github.com/rtt/10403467 */
 import type { Tinder } from 'tinder'
 import { withTinder } from '~/lib'
 
