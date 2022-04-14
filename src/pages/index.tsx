@@ -1,81 +1,106 @@
 import type { GridProps } from '@nextui-org/react'
-import { Card, Grid, Loading } from '@nextui-org/react'
-import { Suspense, useEffect, useState } from 'react'
-import useSWR from 'swr'
+import { Button, Card, Grid, Loading } from '@nextui-org/react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
+import useSWRInfinite from 'swr/infinite'
 import type { Tinder } from 'tinder'
-import { Item } from '~/components'
+import { Filter, Item } from '~/components'
 
 const { FB_APP_ID } = process.env
 
 const Placeholder = (props: GridProps) => (
-  <Grid css={{ textAlign: 'center' }} sm={100} {...props}>
+  <Grid justify="center" sm={100} {...props}>
     <Card>
       <Loading size="xl" type="spinner" />
     </Card>
   </Grid>
 )
 
-const Inner = ({
-  pageToken,
-  userID
-}: {
-  userID?: string
-  pageToken?: string
-}) => {
-  const [items, update] = useState<Tinder.Match[]>([])
+const Inner = ({ accessToken, userID }: Partial<FBStatus['authResponse']>) => {
+  const [filters, setFilters] = useState<Record<string, FilterType>>({
+    distance: 1e3
+  })
 
-  const { data, isValidating } = useSWR<{ data: Tinder.MatchResponse }>(
-    userID
-      ? `/api/matches?${new URLSearchParams({
-          count: 100,
-          pageToken
-        } as any).toString()}`
-      : null
-  )
+  const { data, mutate, setSize, size } = useSWRInfinite<{
+    data: Tinder.MatchResponse
+  }>((idx, prev) => {
+    const args = new URLSearchParams()
+    args.append('count', '20')
+    args.append('u', `${userID}`)
+    args.append('t', `${accessToken}`)
 
-  useEffect(
+    if (prev && prev.data?.next_page_token) {
+      args.append('page_token', prev.data.next_page_token)
+    }
+
+    if (!idx || prev) {
+      return `/api/matches?${args.toString()}`
+    }
+
+    return null
+  })
+
+  const items = useMemo(
     () =>
-      void !isValidating &&
-      update(
-        Array.from(data?.data?.matches ?? [])
-          .filter(i => !!i?.person?.photos?.length)
-          .sort((a, b) => +b?.is_super_like - +a?.is_super_like)
-      ),
-    [data, isValidating]
+      Array.isArray(data)
+        ? data
+            .flatMap(i => i?.data?.matches)
+            .filter(i => !!i?.person?.photos?.length)
+            .filter(i =>
+              Object.entries(filters).every(([k, v]) =>
+                typeof v === 'function'
+                  ? v(i)
+                  : (i?.[k] ?? i?.person?.[k] ?? v) === v
+              )
+            )
+        : [],
+    [data, filters]
   )
+
+  console.log(filters.distance)
 
   return (
     <>
-      {isValidating || !items?.length ? (
+      <Filter {...{ filters, setFilters }} />
+
+      {!items?.length ? (
         <Placeholder md={3} sm={6} xs={12} />
       ) : (
         <>
-          <Suspense fallback={<Placeholder md={3} sm={6} xs={12} />}>
+          <Suspense
+            fallback={<Placeholder md={3} sm={6} xs={12} />}
+            key={JSON.stringify(filters)}>
             {items?.map(i => (
               <Item
                 key={i?.id}
                 md={3}
                 sm={6}
                 xs={12}
-                {...{ item: i, update }}
+                {...{ filters, item: i, mutate, setFilters }}
               />
             ))}
           </Suspense>
-
-          {data?.data?.next_page_token && (
-            <Inner
-              key={data?.data?.next_page_token}
-              {...{ pageToken: data?.data?.next_page_token, userID }}
-            />
-          )}
         </>
+      )}
+
+      {data?.[data.length - 1]?.data?.next_page_token && (
+        <Grid justify="center" sm={100}>
+          <Button
+            color="gradient"
+            css={{ w: '100%' }}
+            onClick={() => setSize(size + 1)}
+            rounded
+            shadow
+            size="xl">
+            Load More
+          </Button>
+        </Grid>
       )}
     </>
   )
 }
 
 export default function Index() {
-  const [user, setUser] = useState<FBStatus['authResponse'] | null>()
+  const [user, setUser] = useState<Partial<FBStatus['authResponse']> | null>({})
 
   useEffect(() => {
     if (!('browser' in process) || user?.accessToken) {
@@ -117,9 +142,16 @@ export default function Index() {
     <Grid.Container css={{ padding: 10 }} gap={2} justify="center">
       <Grid sm={100} />
 
-      {user?.accessToken ? <Inner {...user} /> : <Placeholder />}
+      <Inner {...user} />
 
       <Grid sm={100} />
     </Grid.Container>
   )
 }
+
+export type FilterType =
+  | ((a: Tinder.Match) => boolean)
+  | string
+  | number
+  | boolean
+  | undefined

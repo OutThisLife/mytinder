@@ -17,9 +17,7 @@ export default function App({ Component, pageProps }: AppProps) {
       <main>
         <SWRConfig
           value={{
-            fetcher: (k, v) => fetch(k, v).then(r => r.json()),
-            revalidateOnFocus: false,
-            revalidateOnReconnect: false
+            fetcher: (k, v) => fetch(k, v).then(r => r.json())
           }}>
           <NextUIProvider>
             <Suspense fallback={<div>Loading...</div>}>

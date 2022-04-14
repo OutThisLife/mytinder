@@ -5,6 +5,7 @@ declare module 'tinder' {
       meta?: { status: number }
       status?: number
       statusText?: string
+      results?: T
     }
 
     interface AuthResponse {
@@ -16,6 +17,10 @@ declare module 'tinder' {
     interface MatchResponse {
       matches: Match[]
       next_page_token: string
+    }
+
+    interface UserResponse {
+      results: User
     }
 
     interface Match {
@@ -49,6 +54,7 @@ declare module 'tinder' {
       seen: Seen
       subscription_tier: string
       super_liker?: string | null
+      user?: User
     }
 
     interface Seen {
@@ -176,6 +182,27 @@ declare module 'tinder' {
       photo?: Photo | null
       type: string
       user_id: string
+    }
+
+    interface User {
+      _id: string
+      badges?: { type: string }[] | null
+      bio: string
+      birth_date_info: string
+      birth_date: string
+      city: string
+      common_friend_count: number
+      common_interests?: string[] | null
+      common_like_count: number
+      common_likes?: string[] | null
+      connection_count: number
+      distance_mi: number
+      gender: number
+      is_tinder_u: boolean
+      name: string
+      photos?: Photo[] | null
+      ping_time: string
+      s_number: number
     }
   }
 }
