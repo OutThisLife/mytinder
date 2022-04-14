@@ -61,19 +61,19 @@ export default function Index() {
 
     const handle = (e: FBStatus) => {
       if (e?.status === 'connected') {
-        window.FB.Event.unsubscribe('auth.statusChange', handle)
+        window.FB?.Event.unsubscribe('auth.statusChange', handle)
         setUser(e.authResponse)
       } else {
-        window.FB.login(() => void null, {
+        window.FB?.login(() => void null, {
           scope: ['email', 'public_profile'].join(',')
         })
       }
     }
 
-    window.FB.Event.subscribe('auth.statusChange', handle)
+    window.FB?.Event.subscribe('auth.statusChange', handle)
 
     window.requestAnimationFrame(() =>
-      window.FB.init({
+      window.FB?.init({
         appId: FB_APP_ID,
         cookie: true,
         status: true,
@@ -85,8 +85,8 @@ export default function Index() {
     return () =>
       void (
         'browser' in process &&
-        window?.FB &&
-        window.FB.Event.unsubscribe('auth.statusChange', handle)
+        window.FB &&
+        window.FB?.Event.unsubscribe('auth.statusChange', handle)
       )
   }, [user?.accessToken])
 
