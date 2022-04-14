@@ -3,7 +3,7 @@ import { Button, Card, Grid, Loading } from '@nextui-org/react'
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import useSWRInfinite from 'swr/infinite'
 import type { Tinder } from 'tinder'
-import { Filter, Item } from '~/components'
+import { Item } from '~/components'
 
 const { FB_APP_ID } = process.env
 
@@ -17,14 +17,15 @@ const Placeholder = (props: GridProps) => (
 
 const Inner = ({ accessToken, userID }: Partial<FBStatus['authResponse']>) => {
   const [filters, setFilters] = useState<Record<string, FilterType>>({
-    distance: 1e3
+    distance: 10,
+    gender: 0
   })
 
   const { data, mutate, setSize, size } = useSWRInfinite<{
     data: Tinder.MatchResponse
   }>((idx, prev) => {
     const args = new URLSearchParams()
-    args.append('count', '20')
+    args.append('count', '100')
     args.append('u', `${userID}`)
     args.append('t', `${accessToken}`)
 
@@ -56,12 +57,8 @@ const Inner = ({ accessToken, userID }: Partial<FBStatus['authResponse']>) => {
     [data, filters]
   )
 
-  console.log(filters.distance)
-
   return (
     <>
-      <Filter {...{ filters, setFilters }} />
-
       {!items?.length ? (
         <Placeholder md={3} sm={6} xs={12} />
       ) : (

@@ -11,7 +11,7 @@ const getAge = (d: string) =>
   Math.floor((+new Date() - +new Date(d)) / 31557600000)
 
 export const Item = ({
-  item: { _id: id, is_super_like, person, ...item },
+  item: { _id: id, is_super_like, person },
   mutate,
   setFilters,
   ...props
