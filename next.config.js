@@ -105,7 +105,6 @@ module.exports = withPlugins(
     },
     poweredByHeader: false,
     reactStrictMode: true,
-    swcMinify: true,
     typescript: { ignoreBuildErrors: true }
   }
 )
