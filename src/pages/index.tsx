@@ -53,54 +53,28 @@ const Inner = ({ accessToken, userID }: Partial<FBStatus['authResponse']>) => {
     }
   )
 
-  const full = useMemo(
+  const items = useMemo(
     () => (Array.isArray(data) ? data.flatMap(i => i?.matches) : []),
     [data]
   )
-
-  const items = useMemo(() => {
-    const s = {
-      f0: (i: Tinder.Match) =>
-        i?.hide_distance
-          ? i?.person?.city?.name === 'Minneapolis'
-          : i?.person?.distance_mi <= 25,
-
-      f1: (i: Tinder.Match) =>
-        i?.hide_distance
-          ? i?.person?.city?.name !== 'Minneapolis'
-          : i?.person?.distance_mi > 25
-    }
-
-    return Array.from(full)
-      .filter(s.f0)
-      .sort(
-        (a, b) => (a?.person?.distance_mi ?? 0) - (b?.person?.distance_mi ?? 0)
-      )
-  }, [full])
 
   return (
     <>
       <Actions {...{ items, mutate }} />
 
-      {!full?.length ? (
+      {!items?.length ? (
         <Placeholder md={3} sm={6} xs={12} />
       ) : (
         <>
           <Suspense fallback={<Placeholder md={3} sm={6} xs={12} />}>
             {items?.map(i => (
-              <Item
-                key={i?.id}
-                md={3}
-                sm={6}
-                xs={12}
-                {...{ item: i, mutate }}
-              />
+              <Item key={i?.id} md={3} sm={6} xs={12} {...{ item: i }} />
             ))}
           </Suspense>
         </>
       )}
 
-      {full.length < (data?.[0]?.count ?? 1e3) && (
+      {items.length < (data?.[0]?.count ?? 1e3) && (
         <Grid justify="center" sm={100}>
           <Button
             color="gradient"

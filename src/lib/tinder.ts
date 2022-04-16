@@ -3,8 +3,6 @@ import cache from 'memory-cache'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import type { Tinder } from 'tinder'
 
-const { FB_TOKEN, FB_UID } = process.env
-
 const log = (...args: any[]) => {
   const debug = 1
 
@@ -92,6 +90,8 @@ export const withTinder =
     }) => Promise<void>
   ) =>
   async (req: NextApiRequest, res: NextApiResponse) => {
+    const { FB_TOKEN, FB_UID } = process.env
+
     res.setHeader(
       'Cache-Control',
       'public, s-maxage=10, stale-while-revalidate=59'

@@ -1,30 +1,31 @@
 import type { GridProps } from '@nextui-org/react'
 import { Button, Card, Col, Grid, Link, Row, Text } from '@nextui-org/react'
-import { useCallback } from 'react'
-import type { KeyedMutator } from 'swr'
+import { useCallback, useState } from 'react'
 import type { Tinder } from 'tinder'
-
-const getAge = (d: string) =>
-  Math.floor((+new Date() - +new Date(d)) / 31557600000)
+import { getAge } from '~/lib'
 
 export const Item = ({
   item: { _id: id, is_super_like, person },
-  mutate,
   ...props
 }: ItemProps) => {
+  const [visible, del] = useState<boolean>(() => true)
+
   const onClick = useCallback(async () => {
     try {
-      console.log('unmatch', id)
+      del(false)
       await fetch(`/api/unmatch?id=${id}`)
-      await mutate()
     } catch (err) {
       console.error(err)
     }
   }, [id])
 
+  if (!visible) {
+    return null
+  }
+
   return (
     <Grid {...props}>
-      <Card cover>
+      <Card cover css={{ cursor: 'pointer' }} hoverable shadow {...{ onClick }}>
         {!!person?.photos?.length && (
           <Card.Body
             css={{
@@ -79,7 +80,9 @@ export const Item = ({
             <Col>
               <Text color="#d1d1d1" size={12}>
                 <Link href={`/api/user?id=${person?._id}`} target="_blank">
-                  Profile
+                  <Text color="#d1d1d1" size={12} weight="bold">
+                    Profile
+                  </Text>
                 </Link>
                 <br />
                 {is_super_like ? 'Super' : 'Liked'}
@@ -108,7 +111,6 @@ export const Item = ({
 
 interface ItemProps extends GridProps {
   item: Tinder.Match
-  mutate: KeyedMutator<Tinder.MatchResponse[]>
 }
 
 export default Item

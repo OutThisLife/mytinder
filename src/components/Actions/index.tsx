@@ -1,6 +1,7 @@
 import type { CardProps } from '@nextui-org/react'
 import { Button, Card } from '@nextui-org/react'
 import { useCallback } from 'react'
+import type { KeyedMutator } from 'swr'
 import type { Tinder } from 'tinder'
 
 export const Actions = ({ mutate, items = [], ...props }: ActionsProps) => {
@@ -30,7 +31,7 @@ export const Actions = ({ mutate, items = [], ...props }: ActionsProps) => {
       shadow
       {...props}>
       <Button auto color="error" {...{ onClick }}>
-        Unmatch All
+        Unmatch All ({items.length})
       </Button>
     </Card>
   )
