@@ -1,6 +1,6 @@
 import type { GridProps } from '@nextui-org/react'
 import { Button, Card, Grid, Loading } from '@nextui-org/react'
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import useSWRInfinite from 'swr/infinite'
 import type { Tinder } from 'tinder'
 import { Actions, Item } from '~/components'
@@ -16,6 +16,8 @@ const Placeholder = (props: GridProps) => (
 )
 
 const Inner = ({ accessToken, userID }: Partial<FBStatus['authResponse']>) => {
+  const [items, set] = useState<Tinder.Match[]>([])
+
   const { data, mutate, setSize, size } = useSWRInfinite<Tinder.MatchResponse>(
     (idx, prev) => {
       const args = new URLSearchParams()
@@ -27,6 +29,7 @@ const Inner = ({ accessToken, userID }: Partial<FBStatus['authResponse']>) => {
         : Math.ceil(Number(prev?.count ?? prev?.matches?.length) / per)
 
       args.append('y', `${per}`)
+      args.append('clear', '1')
 
       if (idx < max) {
         args.append('x', `${idx * per}`)
@@ -53,14 +56,15 @@ const Inner = ({ accessToken, userID }: Partial<FBStatus['authResponse']>) => {
     }
   )
 
-  const items = useMemo(
-    () => (Array.isArray(data) ? data.flatMap(i => i?.matches) : []),
-    [data]
-  )
+  useEffect(() => {
+    set(Array.isArray(data) ? data.flatMap(i => i?.matches) : [])
+  }, [data])
 
   return (
     <>
-      <Actions {...{ items, mutate }} />
+      <Suspense fallback={null}>
+        <Actions key={items.length} {...{ items, mutate }} />
+      </Suspense>
 
       {!items?.length ? (
         <Placeholder md={3} sm={6} xs={12} />
@@ -68,7 +72,7 @@ const Inner = ({ accessToken, userID }: Partial<FBStatus['authResponse']>) => {
         <>
           <Suspense fallback={<Placeholder md={3} sm={6} xs={12} />}>
             {items?.map(i => (
-              <Item key={i?.id} md={3} sm={6} xs={12} {...{ item: i }} />
+              <Item key={i?.id} md={3} sm={6} xs={12} {...{ item: i, set }} />
             ))}
           </Suspense>
         </>

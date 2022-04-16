@@ -1,31 +1,28 @@
 import type { GridProps } from '@nextui-org/react'
 import { Button, Card, Col, Grid, Link, Row, Text } from '@nextui-org/react'
-import { useCallback, useState } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
+import { useCallback } from 'react'
 import type { Tinder } from 'tinder'
 import { getAge } from '~/lib'
 
 export const Item = ({
   item: { _id: id, is_super_like, person },
+  set,
   ...props
 }: ItemProps) => {
-  const [visible, del] = useState<boolean>(() => true)
-
   const onClick = useCallback(async () => {
     try {
-      del(false)
+      set(r => r.filter(i => i._id !== id))
+
       await fetch(`/api/unmatch?id=${id}`)
     } catch (err) {
       console.error(err)
     }
   }, [id])
 
-  if (!visible) {
-    return null
-  }
-
   return (
     <Grid {...props}>
-      <Card cover css={{ cursor: 'pointer' }} hoverable shadow {...{ onClick }}>
+      <Card cover hoverable shadow>
         {!!person?.photos?.length && (
           <Card.Body
             css={{
@@ -111,6 +108,7 @@ export const Item = ({
 
 interface ItemProps extends GridProps {
   item: Tinder.Match
+  set: Dispatch<SetStateAction<Tinder.Match[]>>
 }
 
 export default Item

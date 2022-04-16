@@ -4,7 +4,7 @@ import { withTinder } from '~/lib'
 
 export default withTinder(async ({ req, res, t }) => {
   if ('clear' in req.query) {
-    cache.clear()
+    cache.del(`https://api.gotinder.com/updates?locale=en`)
   }
 
   const r = await t<any, Tinder.MatchResponse>('POST', '/updates', {

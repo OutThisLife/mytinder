@@ -30,7 +30,7 @@ export const Actions = ({ mutate, items = [], ...props }: ActionsProps) => {
       }}
       shadow
       {...props}>
-      <Button auto color="error" {...{ onClick }}>
+      <Button auto color="error" disabled {...{ onClick }}>
         Unmatch All ({items.length})
       </Button>
     </Card>
