@@ -17,6 +17,7 @@ declare module 'tinder' {
     interface MatchResponse {
       matches: Match[]
       next_page_token: string
+      count: number
     }
 
     interface UserResponse {
@@ -28,6 +29,7 @@ declare module 'tinder' {
       closed: boolean
       common_friend_count: number
       common_like_count: number
+      hide_distance: boolean
       created_date: string
       dead: boolean
       following_moments: boolean
@@ -49,7 +51,7 @@ declare module 'tinder' {
       messages?: (MessagesEntity | null)[] | null
       participants?: string[] | null
       pending: boolean
-      person: Person
+      person: Person & User
       readreceipt: { enabled: boolean }
       seen: Seen
       subscription_tier: string
@@ -190,7 +192,7 @@ declare module 'tinder' {
       bio: string
       birth_date_info: string
       birth_date: string
-      city: string
+      city: { name: string }
       common_friend_count: number
       common_interests?: string[] | null
       common_like_count: number

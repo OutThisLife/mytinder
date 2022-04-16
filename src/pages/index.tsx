@@ -3,7 +3,7 @@ import { Button, Card, Grid, Loading } from '@nextui-org/react'
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import useSWRInfinite from 'swr/infinite'
 import type { Tinder } from 'tinder'
-import { Item } from '~/components'
+import { Actions, Item } from '~/components'
 
 const { FB_APP_ID } = process.env
 
@@ -16,70 +16,91 @@ const Placeholder = (props: GridProps) => (
 )
 
 const Inner = ({ accessToken, userID }: Partial<FBStatus['authResponse']>) => {
-  const [filters, setFilters] = useState<Record<string, FilterType>>({
-    distance: 10,
-    gender: 0
-  })
+  const { data, mutate, setSize, size } = useSWRInfinite<Tinder.MatchResponse>(
+    (idx, prev) => {
+      const args = new URLSearchParams()
 
-  const { data, mutate, setSize, size } = useSWRInfinite<{
-    data: Tinder.MatchResponse
-  }>((idx, prev) => {
-    const args = new URLSearchParams()
-    args.append('count', '100')
-    args.append('u', `${userID}`)
-    args.append('t', `${accessToken}`)
+      const per = 1e3
 
-    if (prev && prev.data?.next_page_token) {
-      args.append('page_token', prev.data.next_page_token)
+      const max = !prev
+        ? 10
+        : Math.ceil(Number(prev?.count ?? prev?.matches?.length) / per)
+
+      args.append('y', `${per}`)
+
+      if (idx < max) {
+        args.append('x', `${idx * per}`)
+      }
+
+      if (!idx || prev) {
+        return `/api/matches?${args.toString()}`
+      }
+
+      return null
+    },
+    async k =>
+      (
+        await fetch(k, {
+          headers: {
+            'X-Access-Token': `${accessToken}`,
+            'X-User-ID': `${userID}`
+          }
+        })
+      ).json(),
+    {
+      persistSize: true,
+      revalidateFirstPage: false
     }
-
-    if (!idx || prev) {
-      return `/api/matches?${args.toString()}`
-    }
-
-    return null
-  })
-
-  const items = useMemo(
-    () =>
-      Array.isArray(data)
-        ? data
-            .flatMap(i => i?.data?.matches)
-            .filter(i => !!i?.person?.photos?.length)
-            .filter(i =>
-              Object.entries(filters).every(([k, v]) =>
-                typeof v === 'function'
-                  ? v(i)
-                  : (i?.[k] ?? i?.person?.[k] ?? v) === v
-              )
-            )
-        : [],
-    [data, filters]
   )
+
+  const full = useMemo(
+    () => (Array.isArray(data) ? data.flatMap(i => i?.matches) : []),
+    [data]
+  )
+
+  const items = useMemo(() => {
+    const s = {
+      f0: (i: Tinder.Match) =>
+        i?.hide_distance
+          ? i?.person?.city?.name === 'Minneapolis'
+          : i?.person?.distance_mi <= 25,
+
+      f1: (i: Tinder.Match) =>
+        i?.hide_distance
+          ? i?.person?.city?.name !== 'Minneapolis'
+          : i?.person?.distance_mi > 25
+    }
+
+    return Array.from(full)
+      .filter(s.f0)
+      .sort(
+        (a, b) => (a?.person?.distance_mi ?? 0) - (b?.person?.distance_mi ?? 0)
+      )
+  }, [full])
 
   return (
     <>
-      {!items?.length ? (
+      <Actions {...{ items, mutate }} />
+
+      {!full?.length ? (
         <Placeholder md={3} sm={6} xs={12} />
       ) : (
         <>
-          <Suspense
-            fallback={<Placeholder md={3} sm={6} xs={12} />}
-            key={JSON.stringify(filters)}>
+          <Suspense fallback={<Placeholder md={3} sm={6} xs={12} />}>
             {items?.map(i => (
               <Item
                 key={i?.id}
                 md={3}
                 sm={6}
                 xs={12}
-                {...{ filters, item: i, mutate, setFilters }}
+                {...{ item: i, mutate }}
               />
             ))}
           </Suspense>
         </>
       )}
 
-      {data?.[data.length - 1]?.data?.next_page_token && (
+      {full.length < (data?.[0]?.count ?? 1e3) && (
         <Grid justify="center" sm={100}>
           <Button
             color="gradient"
@@ -145,10 +166,3 @@ export default function Index() {
     </Grid.Container>
   )
 }
-
-export type FilterType =
-  | ((a: Tinder.Match) => boolean)
-  | string
-  | number
-  | boolean
-  | undefined

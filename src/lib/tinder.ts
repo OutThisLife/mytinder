@@ -5,9 +5,17 @@ import type { Tinder } from 'tinder'
 
 const { FB_TOKEN, FB_UID } = process.env
 
+const log = (...args: any[]) => {
+  const debug = 1
+
+  if (debug) {
+    console.log(...args)
+  }
+}
+
 export const t =
   (token: string) =>
-  async <T extends Record<string, any>>(
+  async <T extends Record<string, any>, K = Tinder.Response<T>>(
     method = 'POST',
     p = '',
     {
@@ -19,7 +27,7 @@ export const t =
       headers?: Record<string, any>
       ttl?: number
     } = {}
-  ): Promise<Tinder.Response<T>> => {
+  ): Promise<K> => {
     const url = new URL(p, `https://api.gotinder.com/`)
     url.searchParams.append('locale', 'en')
 
@@ -41,38 +49,38 @@ export const t =
       Object.assign(args, { body: JSON.stringify(body ?? {}) })
     }
 
-    const u = url.toString()
-    const cachable = /post|get/i.test(u)
+    const k = url.toString()
+    const cachable = /post|get/i.test(args.method)
 
-    if (!cache.get(u)) {
+    if (!cache.get(k)) {
       if (cachable) {
-        console.log('[MISS]', u)
+        log('[MISS]', k)
       } else {
-        console.log(`[${args.method}]`, u)
+        log(`[${args.method}]`, k)
       }
 
-      const r = await fetch(u, args)
+      const r = await fetch(k, args)
 
       try {
         const j = await r.json()
 
         if (cachable) {
-          cache.put(u, j, ttl)
+          cache.put(k, j, ttl)
         }
 
         return j
       } catch (_) {
         return {
-          data: {} as T,
+          data: {},
           status: r.status,
           statusText: r.statusText
-        }
+        } as any as K
       }
     }
 
-    console.log('[HIT]', u)
+    log('[HIT]', k)
 
-    return cache.get(u)
+    return cache.get(k)
   }
 
 export const withTinder =

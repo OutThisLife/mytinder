@@ -1,11 +1,8 @@
 import type { GridProps } from '@nextui-org/react'
-import { Button, Card, Col, Grid, Row, Text } from '@nextui-org/react'
-import type { Dispatch, SetStateAction } from 'react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Button, Card, Col, Grid, Link, Row, Text } from '@nextui-org/react'
+import { useCallback } from 'react'
 import type { KeyedMutator } from 'swr'
-import useSWR from 'swr'
 import type { Tinder } from 'tinder'
-import type { FilterType } from '~/pages'
 
 const getAge = (d: string) =>
   Math.floor((+new Date() - +new Date(d)) / 31557600000)
@@ -13,62 +10,20 @@ const getAge = (d: string) =>
 export const Item = ({
   item: { _id: id, is_super_like, person },
   mutate,
-  setFilters,
   ...props
 }: ItemProps) => {
-  const ref = useRef<HTMLDivElement>(null)
-  const [visible, set] = useState<boolean>(() => false)
-
-  const { data } = useSWR<Tinder.UserResponse>(
-    visible ? `/api/user?id=${person?._id}` : null
-  )
-
   const onClick = useCallback(async () => {
     try {
+      console.log('unmatch', id)
       await fetch(`/api/unmatch?id=${id}`)
-
-      mutate(async (r = []) =>
-        r.map(i => ({
-          ...i,
-          data: {
-            ...i.data,
-            matches: i?.data?.matches?.filter(i2 => i2?._id !== id)
-          }
-        }))
-      )
+      await mutate()
     } catch (err) {
       console.error(err)
     }
   }, [id])
 
-  useEffect(() => {
-    if (!('browser' in process || ref.current instanceof HTMLElement)) {
-      return
-    }
-
-    const io = new IntersectionObserver(
-      ([e]) => e.isIntersecting && (set(true), io.disconnect())
-    ) as IntersectionObserver
-
-    io.observe(ref.current as HTMLElement)
-
-    return () => io.disconnect()
-  }, [])
-
-  useEffect(
-    () =>
-      void data?.results &&
-      setFilters(r => ({
-        ...r,
-        [id]: function () {
-          return (data?.results?.distance_mi ?? 1) <= (this?.distance ?? 1e3)
-        }
-      })),
-    [id, data?.results]
-  )
-
   return (
-    <Grid {...{ ref, ...props }}>
+    <Grid {...props}>
       <Card cover>
         {!!person?.photos?.length && (
           <Card.Body
@@ -115,8 +70,19 @@ export const Item = ({
               </Text>
 
               <Text color="#d1d1d1" size={12}>
-                {is_super_like ? 'Super' : 'Liked'} &mdash;{' '}
-                {data?.results?.distance_mi} miles away
+                {person?.city?.name}
+                {person?.hide_distance ||
+                  ` - ${person?.distance_mi} miles away`}
+              </Text>
+            </Col>
+
+            <Col>
+              <Text color="#d1d1d1" size={12}>
+                <Link href={`/api/user?id=${person?._id}`} target="_blank">
+                  Profile
+                </Link>
+                <br />
+                {is_super_like ? 'Super' : 'Liked'}
               </Text>
             </Col>
 
@@ -142,8 +108,7 @@ export const Item = ({
 
 interface ItemProps extends GridProps {
   item: Tinder.Match
-  mutate: KeyedMutator<{ data: Tinder.MatchResponse }[]>
-  setFilters: Dispatch<SetStateAction<Record<string, FilterType>>>
+  mutate: KeyedMutator<Tinder.MatchResponse[]>
 }
 
 export default Item
