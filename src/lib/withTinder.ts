@@ -13,10 +13,10 @@ export default (
       t: ReturnType<typeof t>
       token?: string
       auth?: Tinder.AuthResponse
-    }) => Promise<void>
+    }) => Promise<any>
   ) =>
   async (req: NextApiRequest, res: NextApiResponse) => {
-    if ('clear' in req.query) {
+    if ('clear' in (req?.query ?? {})) {
       cache.clear()
     }
 

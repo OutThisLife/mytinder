@@ -24,5 +24,9 @@ export default withTinder(async ({ req, res, t }) => {
     }) ?? []
   )
 
-  res.status(200).json({ count: r?.matches?.length ?? 1e3, matches })
+  if (typeof res?.status === 'function') {
+    return res.status(200).json({ count: r?.matches?.length ?? 1e3, matches })
+  }
+
+  return { count: r?.matches?.length ?? 1e3, matches }
 })

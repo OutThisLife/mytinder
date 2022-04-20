@@ -1,4 +1,5 @@
 import { Button, Card, Grid } from '@nextui-org/react'
+import type { GetServerSideProps, NextApiRequest, NextApiResponse } from 'next'
 import { Suspense } from 'react'
 import useSWR, { SWRConfig } from 'swr'
 import type { Tinder } from 'tinder'
@@ -81,18 +82,12 @@ export default function Index({
   )
 }
 
-export const getServerSideProps = async () => {
-  console.log(`${process.env.HOSTNAME ?? 'http://localhost:3000'}/api/matches/`)
-
-  return {
-    props: {
-      fallback: {
-        '/api/matches/': await (
-          await fetch(
-            `${process.env.HOSTNAME ?? 'http://localhost:3000'}/api/matches/`
-          )
-        ).json()
-      }
+export const getServerSideProps: GetServerSideProps = async ({ req, res }) => ({
+  props: {
+    fallback: {
+      '/api/matches/': await (
+        await import('./api/matches')
+      ).default(req as NextApiRequest, res as NextApiResponse)
     }
   }
-}
+})
