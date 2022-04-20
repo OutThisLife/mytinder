@@ -81,14 +81,18 @@ export default function Index({
   )
 }
 
-export const getStaticProps = async () => ({
-  props: {
-    fallback: {
-      '/api/matches/': await (
-        await fetch(
-          `${process.env.HOSTNAME ?? 'http://localhost:3000'}/api/matches/`
-        )
-      ).json()
+export const getStaticProps = async () => {
+  console.log(`${process.env.HOSTNAME ?? 'http://localhost:3000'}/api/matches/`)
+
+  return {
+    props: {
+      fallback: {
+        '/api/matches/': await (
+          await fetch(
+            `${process.env.HOSTNAME ?? 'http://localhost:3000'}/api/matches/`
+          )
+        ).json()
+      }
     }
   }
-})
+}
