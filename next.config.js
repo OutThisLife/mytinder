@@ -104,6 +104,16 @@ module.exports = withPlugins(
     },
     poweredByHeader: false,
     reactStrictMode: true,
-    typescript: { ignoreBuildErrors: true }
+    typescript: { ignoreBuildErrors: true },
+
+    webpack(cfg, { dev, isServer, webpack }) {
+      cfg.plugins.push(new webpack.IgnorePlugin(/\/__tests__\//))
+
+      if (isServer && !dev) {
+        cfg.externals.push('aws-sdk', 'chrome-aws-lambda', 'lambdafs')
+      }
+
+      return cfg
+    }
   }
 )
