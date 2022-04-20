@@ -1,4 +1,4 @@
-import type { Browser } from 'puppeteer'
+import type { Browser } from 'puppeteer-core'
 
 export default async (): Promise<Browser> => {
   const chromium = (await import('chrome-aws-lambda')).default
@@ -11,7 +11,7 @@ export default async (): Promise<Browser> => {
   }
 
   if (!(await chromium.executablePath)) {
-    return (await import('puppeteer')).launch(opts)
+    return (await import('puppeteer-core')).launch(opts)
   }
 
   return chromium.puppeteer.launch(opts)
