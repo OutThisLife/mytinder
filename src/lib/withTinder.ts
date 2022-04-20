@@ -20,7 +20,7 @@ export default (
       cache.clear()
     }
 
-    res.setHeader(
+    res?.setHeader?.(
       'Cache-Control',
       'public, s-maxage=10, stale-while-revalidate=59'
     )
@@ -40,7 +40,7 @@ export default (
         if (!auth?.data?.api_token) {
           log('[ERROR]', auth)
 
-          return res.status(401).json(auth)
+          return res?.status?.(401).json(auth)
         }
 
         cache.put('tinder', auth.data.api_token)
@@ -56,7 +56,7 @@ export default (
     } catch (err: any) {
       log('[ERROR]', err)
 
-      return res.status(500).json({
+      return res?.status?.(500).json({
         message: err?.message,
         statusCode: 500
       })
