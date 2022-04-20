@@ -26,7 +26,7 @@ module.exports = require('next-compose-plugins')(
         },
         {
           key: 'X-Host',
-          value: HOSTNAME
+          value: process.env.VERCEL_URL ?? 'localhost:3000'
         },
         {
           key: 'X-Robots-Tag',

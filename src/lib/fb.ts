@@ -1,5 +1,4 @@
 import cache from 'memory-cache'
-import { log } from '.'
 
 export default async (): Promise<string> => {
   if (!cache.get('fb')) {
@@ -43,7 +42,7 @@ export default async (): Promise<string> => {
         await browser.close()
       }
     } catch (err) {
-      log(err)
+      throw err
     }
   }
 
