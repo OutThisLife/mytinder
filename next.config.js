@@ -1,22 +1,17 @@
-const withPlugins = require('next-compose-plugins')
-
 const {
   NODE_ENV = 'development',
   VERCEL_ENV = NODE_ENV,
-  VERCEL_URL = 'localhost:3000',
-  HOSTNAME = `http${/local/.test(VERCEL_URL) ? '' : 's'}://${VERCEL_URL}`,
   NON_PROD = VERCEL_ENV !== 'production'
 } = process.env
 
 const nonProd = `${NON_PROD}` === 'true'
 const { PHASE_DEVELOPMENT_SERVER } = require('next/constants')
 
-module.exports = withPlugins(
+module.exports = require('next-compose-plugins')(
   [[require('next-offline'), ['!', PHASE_DEVELOPMENT_SERVER]]],
   {
     compiler: { styledComponents: true },
     devIndicators: { buildActivity: false },
-    env: { HOSTNAME },
     eslint: { ignoreDuringBuilds: true },
     experimental: {
       runtime: 'nodejs',
