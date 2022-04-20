@@ -81,7 +81,7 @@ export default function Index({
   )
 }
 
-export const getStaticProps = async () => {
+export const getServerSideProps = async () => {
   console.log(`${process.env.HOSTNAME ?? 'http://localhost:3000'}/api/matches/`)
 
   return {
