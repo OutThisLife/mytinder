@@ -103,7 +103,7 @@ module.exports = require('next-compose-plugins')(
 
     webpack(cfg, { dev, isServer }) {
       if (isServer && !dev) {
-        cfg.externals.push('aws-sdk', 'chrome-aws-lambda', 'lambdafs')
+        cfg.externals = ['chrome-aws-lambda']
       }
 
       return cfg
