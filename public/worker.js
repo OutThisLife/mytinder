@@ -1,5 +1,5 @@
 ;(self => {
-  const CACHE_KEY = 'SHOPWNT'
+  const CACHE_KEY = 'MYTINDER'
 
   self.addEventListener('activate', e => e.waitUntil(self.clients.claim()))
   self.addEventListener('install', e => e.waitUntil(self.skipWaiting()))
@@ -9,7 +9,7 @@
       (async () => {
         const r = e.request
 
-        if (!r.url.includes('json')) {
+        if (!/json$|api|tinder/.test(r.url)) {
           return fetch(r.clone())
         }
 
