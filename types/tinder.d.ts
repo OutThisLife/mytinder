@@ -16,7 +16,6 @@ declare module 'tinder' {
 
     interface MatchResponse {
       matches: Match[]
-      next_page_token: string
       count: number
     }
 

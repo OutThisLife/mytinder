@@ -5,12 +5,7 @@ const {
   VERCEL_ENV = NODE_ENV,
   VERCEL_URL = 'localhost:3000',
   HOSTNAME = `http${/local/.test(VERCEL_URL) ? '' : 's'}://${VERCEL_URL}`,
-  NON_PROD = VERCEL_ENV !== 'production',
-  FB_TOKEN,
-  FB_UID,
-  FB_APP_ID,
-  FB_APP_TOKEN,
-  FB_APP_SECRET
+  NON_PROD = VERCEL_ENV !== 'production'
 } = process.env
 
 const nonProd = `${NON_PROD}` === 'true'
@@ -21,8 +16,12 @@ module.exports = withPlugins(
   {
     compiler: { styledComponents: true },
     devIndicators: { buildActivity: false },
-    env: { FB_APP_ID, FB_APP_SECRET, FB_APP_TOKEN, FB_TOKEN, FB_UID },
+    env: { HOSTNAME },
     eslint: { ignoreDuringBuilds: true },
+    experimental: {
+      runtime: 'nodejs',
+      serverComponents: true
+    },
 
     async headers() {
       const baseHeaders = [

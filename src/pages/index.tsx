@@ -1,146 +1,94 @@
-import type { GridProps } from '@nextui-org/react'
-import { Button, Card, Grid, Loading } from '@nextui-org/react'
-import { Suspense, useEffect, useState } from 'react'
-import useSWRInfinite from 'swr/infinite'
+import { Button, Card, Grid } from '@nextui-org/react'
+import { Suspense } from 'react'
+import useSWR, { SWRConfig } from 'swr'
 import type { Tinder } from 'tinder'
-import { Actions, Item } from '~/components'
+import { Item } from '~/components'
 
-const { FB_APP_ID } = process.env
+const Inner = () => {
+  const { data, mutate } = useSWR<Tinder.MatchResponse>(`/api/matches/`)
 
-const Placeholder = (props: GridProps) => (
-  <Grid justify="center" sm={100} {...props}>
-    <Card>
-      <Loading size="xl" type="spinner" />
-    </Card>
-  </Grid>
-)
+  const remove = async (id: string) => {
+    try {
+      mutate(
+        d => ({
+          count: d?.matches?.length ?? 0,
+          matches: d?.matches?.filter(i => i.id !== id) ?? []
+        }),
+        { revalidate: false }
+      )
 
-const Inner = ({ accessToken, userID }: Partial<FBStatus['authResponse']>) => {
-  const [items, set] = useState<Tinder.Match[]>([])
-
-  const { data, mutate, setSize, size } = useSWRInfinite<Tinder.MatchResponse>(
-    (idx, prev) => {
-      const args = new URLSearchParams()
-
-      const per = 1e3
-
-      const max = !prev
-        ? 10
-        : Math.ceil(Number(prev?.count ?? prev?.matches?.length) / per)
-
-      args.append('y', `${per}`)
-      args.append('clear', '1')
-
-      if (idx < max) {
-        args.append('x', `${idx * per}`)
-      }
-
-      if (!idx || prev) {
-        return `/api/matches?${args.toString()}`
-      }
-
-      return null
-    },
-    async k =>
-      (
-        await fetch(k, {
-          headers: {
-            'X-Access-Token': `${accessToken}`,
-            'X-User-ID': `${userID}`
-          }
-        })
-      ).json(),
-    {
-      persistSize: true,
-      revalidateFirstPage: false
+      await fetch(`/api/unmatch/?id=${id}`)
+    } catch (e) {
+      console.error(e)
     }
-  )
-
-  useEffect(() => {
-    set(Array.isArray(data) ? data.flatMap(i => i?.matches) : [])
-  }, [data])
+  }
 
   return (
     <>
       <Suspense fallback={null}>
-        <Actions key={items.length} {...{ items, mutate }} />
+        {!!data?.matches?.length && (
+          <Card
+            css={{
+              inset: 'auto 1rem 1rem auto',
+              position: 'fixed',
+              w: 'auto',
+              zIndex: 1e3
+            }}
+            shadow>
+            <Button
+              auto
+              color="error"
+              disabled
+              onClick={() =>
+                data?.matches?.map(i => i?._id).forEach(remove.bind(null))
+              }>
+              Unmatch All ({data?.matches?.length})
+            </Button>
+          </Card>
+        )}
       </Suspense>
 
-      {!items?.length ? (
-        <Placeholder md={3} sm={6} xs={12} />
-      ) : (
-        <>
-          <Suspense fallback={<Placeholder md={3} sm={6} xs={12} />}>
-            {items?.map(i => (
-              <Item key={i?.id} md={3} sm={6} xs={12} {...{ item: i, set }} />
-            ))}
+      {(data?.matches ?? [])
+        .filter(i => i)
+        .sort((a, b) => +new Date(b.created_date) - +new Date(a.created_date))
+        .map(i => (
+          <Suspense fallback={null} key={i._id}>
+            <Item md={3} sm={6} xs={12} {...{ remove, ...i }} />
           </Suspense>
-        </>
-      )}
-
-      {items.length < (data?.[0]?.count ?? 1e3) && (
-        <Grid justify="center" sm={100}>
-          <Button
-            color="gradient"
-            css={{ w: '100%' }}
-            onClick={() => setSize(size + 1)}
-            rounded
-            shadow
-            size="xl">
-            Load More
-          </Button>
-        </Grid>
-      )}
+        ))}
     </>
   )
 }
 
-export default function Index() {
-  const [user, setUser] = useState<Partial<FBStatus['authResponse']> | null>({})
-
-  useEffect(() => {
-    if (!('browser' in process) || user?.accessToken) {
-      return
-    }
-
-    const handle = (e: FBStatus) => {
-      if (e?.status === 'connected') {
-        window.FB?.Event.unsubscribe('auth.statusChange', handle)
-        setUser(e.authResponse)
-      } else {
-        window.FB?.login(() => void null, {
-          scope: ['email', 'public_profile'].join(',')
-        })
-      }
-    }
-
-    window.FB?.Event.subscribe('auth.statusChange', handle)
-
-    window.requestAnimationFrame(() =>
-      window.FB?.init({
-        appId: FB_APP_ID,
-        cookie: true,
-        status: true,
-        version: 'v13.0',
-        xfbml: true
-      })
-    )
-
-    return () =>
-      void (
-        'browser' in process &&
-        window.FB &&
-        window.FB?.Event.unsubscribe('auth.statusChange', handle)
-      )
-  }, [user?.accessToken])
-
+export default function Index({
+  fallback
+}: {
+  fallback: Tinder.MatchResponse
+}) {
   return (
-    <Grid.Container css={{ padding: 10 }} gap={2} justify="center">
-      <Grid sm={100} />
-
-      <Inner {...user} />
-
-      <Grid sm={100} />
+    <Grid.Container gap={2}>
+      <SWRConfig
+        value={{
+          fallback,
+          fetcher: async k => (await fetch(k)).json(),
+          suspense: true
+        }}>
+        <Suspense fallback={null}>
+          <Inner />
+        </Suspense>
+      </SWRConfig>
     </Grid.Container>
   )
 }
+
+export const getStaticProps = async () => ({
+  props: {
+    fallback: {
+      '/api/matches/': await (
+        await fetch(
+          `${process.env.HOSTNAME ?? 'http://localhost:3000'}/api/matches/`
+        )
+      ).json()
+    }
+  }
+})

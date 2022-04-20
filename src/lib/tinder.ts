@@ -3,15 +3,11 @@ import cache from 'memory-cache'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import type { Tinder } from 'tinder'
 
-const log = (...args: any[]) => {
-  const debug = 1
+const debug = false
 
-  if (debug) {
-    console.log(...args)
-  }
-}
+const log = (...args: any[]) => debug && console.log(...args)
 
-export const t =
+const t =
   (token: string) =>
   async <T extends Record<string, any>, K = Tinder.Response<T>>(
     method = 'POST',
@@ -19,11 +15,13 @@ export const t =
     {
       body = {},
       headers = {},
-      ttl = 24 * 1e3 * 60 * 60
+      ttl = 24 * 1e3 * 60 * 60,
+      key
     }: {
       body?: Record<string, any>
       headers?: Record<string, any>
       ttl?: number
+      key?: string
     } = {}
   ): Promise<K> => {
     const url = new URL(p, `https://api.gotinder.com/`)
@@ -47,7 +45,7 @@ export const t =
       Object.assign(args, { body: JSON.stringify(body ?? {}) })
     }
 
-    const k = url.toString()
+    const k = `${key ?? url.toString()}`
     const cachable = /post|get/i.test(args.method)
 
     if (!cache.get(k)) {
@@ -57,7 +55,7 @@ export const t =
         log(`[${args.method}]`, k)
       }
 
-      const r = await fetch(k, args)
+      const r = await fetch(url.toString(), args)
 
       try {
         const j = await r.json()
@@ -81,16 +79,62 @@ export const t =
     return cache.get(k)
   }
 
+const f = async (): Promise<string> => {
+  if (!cache.get('fb')) {
+    const puppeteer = await import('puppeteer')
+    const browser = await puppeteer.launch({ headless: true })
+
+    try {
+      const page = await browser.newPage()
+
+      await page.goto(
+        `https://www.facebook.com/dialog/oauth?client_id=464891386855067&redirect_uri=https://www.facebook.com/connect/login_success.html&scope=basic_info,email,public_profile,user_about_me,user_activities,user_birthday,user_education_history,user_friends,user_interests,user_likes,user_location,user_photos,user_relationship_details&response_type=token`
+      )
+
+      await page.click('#email')
+      await page.keyboard.type(`${process.env.FB_EMAIL}`)
+
+      await page.click('#pass')
+      await page.keyboard.type(`${process.env.FB_PASS}`)
+
+      await page.click('#loginbutton')
+      await page.waitForNavigation()
+
+      const url = new URL(page.url())
+
+      if (!url.pathname.endsWith('login_success.html')) {
+        throw new Error('Login failed')
+      }
+
+      cache.put(
+        'fb',
+        new URLSearchParams(url.hash.split('#')?.pop())?.get('access_token'),
+        1e3 * 60 * 60 * 24
+      )
+    } catch (err) {
+      log(err)
+    } finally {
+      await browser.close()
+    }
+  }
+
+  return cache.get('fb')
+}
+
 export const withTinder =
   (
     cb: (e: {
       req: NextApiRequest
       res: NextApiResponse
       t: ReturnType<typeof t>
+      token?: string
+      auth?: Tinder.AuthResponse
     }) => Promise<void>
   ) =>
   async (req: NextApiRequest, res: NextApiResponse) => {
-    const { FB_TOKEN, FB_UID } = process.env
+    if ('clear' in req.query) {
+      cache.del(`tinder`)
+    }
 
     res.setHeader(
       'Cache-Control',
@@ -98,28 +142,35 @@ export const withTinder =
     )
 
     try {
-      if (!cache.get('token')) {
-        const auth = await t(
-          `${req.query?.t ?? FB_TOKEN}`
-        )<Tinder.AuthResponse>('POST', '/v2/auth/login/facebook', {
-          body: {
-            facebook_id: req?.query?.u ?? FB_UID,
-            token: req.query?.t ?? FB_TOKEN
-          }
-        })
+      if (!cache.get('tinder')) {
+        cache.del(`tinder`)
+
+        const token = await f()
+
+        const auth = await t(token)<Tinder.AuthResponse>(
+          'POST',
+          '/v2/auth/login/facebook',
+          { body: { token }, key: 'auth' }
+        )
 
         if (!auth?.data?.api_token) {
-          console.error('[ERROR]', auth)
+          log('[ERROR]', auth)
 
           return res.status(401).json(auth)
         }
 
-        cache.put('token', auth.data.api_token)
+        cache.put('tinder', auth.data.api_token)
       }
 
-      return cb({ req, res, t: t(cache.get('token')) })
+      return cb({
+        auth: cache.get('tinder'),
+        req,
+        res,
+        t: t(cache.get('tinder')),
+        token: cache.get('fb')
+      })
     } catch (err: any) {
-      console.error('[ERROR]', err)
+      log('[ERROR]', err)
 
       return res.status(500).json({
         message: err?.message,
