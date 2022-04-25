@@ -17,7 +17,7 @@ export default (
   ) =>
   async (req: NextApiRequest, res: NextApiResponse) => {
     if ('clear' in (req?.query ?? {})) {
-      cache.clear()
+      cache.del('https://api.gotinder.com/updates?locale=en')
     }
 
     res?.setHeader?.(

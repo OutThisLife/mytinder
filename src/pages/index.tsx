@@ -51,7 +51,10 @@ const Inner = () => {
 
       {(data?.matches ?? [])
         .filter(i => i)
-        .sort((a, b) => +new Date(b.created_date) - +new Date(a.created_date))
+        .sort(
+          (a, b) =>
+            +new Date(a.person?.distance_mi) - +new Date(b.person?.distance_mi)
+        )
         .map(i => (
           <Suspense fallback={null} key={i._id}>
             <Item md={3} sm={6} xs={12} {...{ remove, ...i }} />
